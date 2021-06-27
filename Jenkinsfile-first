@@ -1,0 +1,48 @@
+pipeline {
+  triggers {
+    pollSCM ('H/3 * * * *')
+  }
+  options {
+    disableConcurrentBuilds()
+  }
+  agent {
+    node {
+      label 'nodejs'
+    }
+  }
+  stages {
+    stage ('Validate resources') {
+      steps {
+        sh 'oc apply --dry-run --validate -f config'
+      }
+    }
+    stage ('Create Deployment') {
+      when {
+        branch 'master'
+      }
+      steps {
+        sh 'oc apply -f config/deployment.yaml'
+      }
+    }
+    stage ('Create Service') {
+      when {
+        branch 'master'
+      }
+      steps {
+        sh 'oc apply -f config/service.yaml'
+      }
+    }
+    stage ('Delete Deployment and Service') {
+      when {
+        branch 'master'
+      }
+      input {
+        message 'If you want to delete resource, click ok'
+        ok 'Ok'
+      }
+      steps {
+        sh 'oc delete -f config'
+      }
+    }
+  }
+}
